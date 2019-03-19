@@ -84,6 +84,8 @@ namespace PLATCV_tool
                 Array.Copy(tmp, 0, table1, 0, tmp.Length);
                 int t_off = 4;
 
+                Array.Sort(fi, (fi1, fi2) => StringComparer.OrdinalIgnoreCase.Compare(fi1.FullName, fi2.FullName));
+
                 MemoryStream ms = new MemoryStream();
 
                 for (int i = 0; i < fi.Length; i++)
@@ -152,7 +154,7 @@ namespace PLATCV_tool
                     offset += tmp.Length;
                     tmp = null;
 
-                    Console.WriteLine("{0:X4}\t{1}\t{2}", tables[i].f_offset, tables[i].f_size, fi[i].FullName.Remove(0, InputFolder.Length));
+                    Console.WriteLine("{0:X8}\t{1}\t{2}", tables[i].f_offset, tables[i].f_size, fi[i].FullName.Remove(0, InputFolder.Length));
                 }
 
                 tmp = new byte[table1.Length + table2.Length];
@@ -274,7 +276,7 @@ namespace PLATCV_tool
                         new_fs.Write(tmp, 0, tmp.Length);
                         new_fs.Close();
 
-                        Console.WriteLine("{0:X4}\t{1}\t{2}", table_data[i].f_offset, table_data[i].f_size, table_data[i].file_name);
+                        Console.WriteLine("{0:X8}\t{1}\t{2}", table_data[i].f_offset, table_data[i].f_size, table_data[i].file_name);
                     }
                 }
                 catch (Exception ex)
