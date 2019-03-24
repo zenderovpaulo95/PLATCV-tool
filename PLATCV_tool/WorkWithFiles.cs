@@ -64,6 +64,7 @@ namespace PLATCV_tool
 
             if (fi.Length > 0)
             {
+                Array.Sort(fi, (fi1, fi2) => StringComparer.OrdinalIgnoreCase.Compare(fi1.FullName, fi2.FullName));
                 Table[] tables = new Table[fi.Length];
                 int offset = 0x14;
 
@@ -84,7 +85,10 @@ namespace PLATCV_tool
                 Array.Copy(tmp, 0, table1, 0, tmp.Length);
                 int t_off = 4;
 
-                Array.Sort(fi, (fi1, fi2) => StringComparer.OrdinalIgnoreCase.Compare(fi1.FullName, fi2.FullName));
+                //If user forgot enter last / in folder
+                bool CheckSlash = InputFolder.EndsWith("/", StringComparison.CurrentCulture) || InputFolder.EndsWith("\\", StringComparison.CurrentCulture);
+
+                if (!CheckSlash) InputFolder += "/"; //Add if doesn't exist
 
                 MemoryStream ms = new MemoryStream();
 
@@ -278,6 +282,117 @@ namespace PLATCV_tool
 
                         Console.WriteLine("{0:X8}\t{1}\t{2}", table_data[i].f_offset, table_data[i].f_size, table_data[i].file_name);
                     }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Something wrong. Error message:\n" + ex.Message);
+                }
+            }
+            else Console.WriteLine("This is not Professor Layton's file!");
+
+            br.Close();
+            fs.Close();
+        }
+
+
+        public static void GetTable(string InputFile, string OutpuFile)
+        {
+            uint offset = 0;
+            int size = 0x14;
+            //int m = -1;
+            byte[] header = new byte[4];
+            byte[] data = new byte[size];
+
+
+            FileStream fs = new FileStream(InputFile, FileMode.Open);
+            BinaryReader br = new BinaryReader(fs);
+            data = br.ReadBytes((int)size);
+            Crypt(offset, ref data, size);
+
+            Array.Copy(data, 0, header, 0, header.Length);
+
+            if (BitConverter.ToInt32(header, 0) == 0x31435241)
+            {
+                try
+                {
+                    size = 0xffff;
+                    offset = 0;
+                    byte[] tmp;
+                    int t_offset; //Смещение к таблице
+                    int t_size; //Размер таблицы
+                    int f_count = -1; //Количество файлов
+                    int a_size = -1; //Размер архива
+
+                    br.BaseStream.Seek(0, SeekOrigin.Begin);
+                    data = br.ReadBytes(size);
+                    Crypt(offset, ref data, size);
+                    tmp = new byte[4];
+                    Array.Copy(data, 4, tmp, 0, tmp.Length);
+                    a_size = BitConverter.ToInt32(tmp, 0);
+                    tmp = new byte[4];
+                    Array.Copy(data, 8, tmp, 0, tmp.Length);
+                    t_offset = BitConverter.ToInt32(tmp, 0);
+                    tmp = new byte[4];
+                    Array.Copy(data, 12, tmp, 0, tmp.Length);
+                    t_size = BitConverter.ToInt32(tmp, 0);
+
+                    br.BaseStream.Seek(t_offset, SeekOrigin.Begin);
+
+                    data = br.ReadBytes(t_size);
+                    Crypt((uint)t_offset, ref data, t_size);
+
+                    tmp = new byte[4];
+                    Array.Copy(data, 0, tmp, 0, tmp.Length);
+                    f_count = BitConverter.ToInt32(tmp, 0);
+                    Table[] table_data = new Table[f_count];
+
+                    offset = 4;
+
+                    string[] list = new string[f_count];
+
+                    for (int i = 0; i < f_count; i++)
+                    {
+                        tmp = new byte[4];
+                        Array.Copy(data, offset, tmp, 0, tmp.Length);
+                        table_data[i].t_name_off = BitConverter.ToInt32(tmp, 0);
+                        offset += 4;
+
+                        tmp = new byte[4];
+                        Array.Copy(data, offset, tmp, 0, tmp.Length);
+                        table_data[i].f_offset = BitConverter.ToInt32(tmp, 0);
+                        offset += 4;
+
+                        tmp = new byte[4];
+                        Array.Copy(data, offset, tmp, 0, tmp.Length);
+                        table_data[i].f_size = BitConverter.ToInt32(tmp, 0);
+                        offset += 4;
+
+                        int ch_off = 0;
+
+                        MemoryStream ms = new MemoryStream(data);
+                        ms.Seek(table_data[i].t_name_off, SeekOrigin.Begin);
+
+                        while (true)
+                        {
+                            tmp = new byte[1];
+                            ms.Read(tmp, 0, tmp.Length);
+
+                            if (tmp[0] == '\0') break;
+                            ch_off++;
+                        }
+                        ms.Close();
+
+                        tmp = new byte[ch_off];
+                        Array.Copy(data, table_data[i].t_name_off, tmp, 0, tmp.Length);
+                        table_data[i].file_name = Encoding.ASCII.GetString(tmp);
+
+                        list[i] = table_data[i].f_offset.ToString("X8") + "\t" + table_data[i].f_size + "\t" + table_data[i].file_name;
+
+                        Console.WriteLine("{0:X8}\t{1}\t{2}", table_data[i].f_offset, table_data[i].f_size, table_data[i].file_name);
+                    }
+
+                    File.WriteAllLines(OutpuFile, list);
+                    Console.WriteLine("Log-file has created");
                 }
                 catch (Exception ex)
                 {

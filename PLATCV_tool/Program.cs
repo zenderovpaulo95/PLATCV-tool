@@ -20,7 +20,7 @@ namespace PLATCV_tool
                 string OutputFolder = AppDomain.CurrentDomain.BaseDirectory + "/extracted";
                 if (args.Length == 3 && Directory.Exists(args[2])) OutputFolder = args[2];
 
-                WorkWithFiles.ExportFiles(InputFile, OutputFolder);
+                if(File.Exists(InputFile)) WorkWithFiles.ExportFiles(InputFile, OutputFolder);
             }
             else if ((args.Length == 2 && args[0] == "import")
             || (args.Length == 3 && args[0] == "import" && Directory.Exists(args[1])))
@@ -33,8 +33,18 @@ namespace PLATCV_tool
                     OutputFile = args[2];
                 }
 
-                WorkWithFiles.ImportFiles(InputFolder, OutputFile);
+                if(Directory.Exists(InputFolder)) WorkWithFiles.ImportFiles(InputFolder, OutputFile);
             }
+            else if((args.Length == 2 && args[0] == "log" && File.Exists(args[1]))
+                || (args.Length == 3 && args[0] == "log" && File.Exists(args[1])))
+                {
+                    string OutputFile = AppDomain.CurrentDomain.BaseDirectory + "/table.log";
+                    string InputFile = args[1];
+
+                    if (args.Length == 3) OutputFile = args[2];
+
+                    WorkWithFiles.GetTable(InputFile, OutputFile);
+                }
         }
     }
 }
