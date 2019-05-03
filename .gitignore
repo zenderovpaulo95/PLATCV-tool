@@ -1,2 +1,4 @@
 PLATCV_tool/bin
 PLACTV_tool/obj
+/.vs/PLATCV_tool
+/PLATCV_tool/obj/x86/Debug

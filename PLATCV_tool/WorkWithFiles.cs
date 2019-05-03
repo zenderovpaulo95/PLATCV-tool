@@ -57,7 +57,7 @@ namespace PLATCV_tool
         }
 
         //Function for import files
-        public static void ImportFiles(string InputFolder, string OutputFile)
+        public static void ImportFiles(string InputFolder, string OutputFile, char slash)
         {
             DirectoryInfo di = new DirectoryInfo(InputFolder);
             FileInfo[] fi = di.GetFiles("*", SearchOption.AllDirectories); //Get files
@@ -85,16 +85,17 @@ namespace PLATCV_tool
                 Array.Copy(tmp, 0, table1, 0, tmp.Length);
                 int t_off = 4;
 
-                //If user forgot enter last / in folder
-                bool CheckSlash = InputFolder.EndsWith("/", StringComparison.CurrentCulture) || InputFolder.EndsWith("\\", StringComparison.CurrentCulture);
+                //If user forgot enter last slash in folder
+                bool CheckSlash = InputFolder[InputFolder.Length - 1] == slash;
 
-                if (!CheckSlash) InputFolder += "/"; //Add if doesn't exist
+                if (!CheckSlash) InputFolder += slash.ToString(); //Add if doesn't exist
 
                 MemoryStream ms = new MemoryStream();
 
                 for (int i = 0; i < fi.Length; i++)
                 {
                     tables[i].file_name = fi[i].FullName.Remove(0, InputFolder.Length) + "\0";
+                    if (!tables[i].file_name.Contains("/")) tables[i].file_name = tables[i].file_name.Replace(slash, '/');
                     tables[i].f_offset = offset;
                     tables[i].f_size = (int)fi[i].Length;
                     tables[i].t_name_off = name_off;
@@ -172,11 +173,10 @@ namespace PLATCV_tool
             }
         }
 
-        public static void ExportFiles(string InputFile, string OutputFolder)
+        public static void ExportFiles(string InputFile, string OutputFolder, char slash)
         {
             uint offset = 0;
             int size = 0x14;
-            //int m = -1;
             byte[] header = new byte[4];
             byte[] data = new byte[size];
 
@@ -195,10 +195,10 @@ namespace PLATCV_tool
                     size = 0xffff;
                     offset = 0;
                     byte[] tmp;
-                    int t_offset; //Смещение к таблице
-                    int t_size; //Размер таблицы
-                    int f_count = -1; //Количество файлов
-                    int a_size = -1; //Размер архива
+                    int t_offset; //Offset to table
+                    int t_size; //Table size
+                    int f_count = -1; //Count of files
+                    int a_size = -1; //Archive's size
 
                     br.BaseStream.Seek(0, SeekOrigin.Begin);
                     data = br.ReadBytes(size);
@@ -260,14 +260,15 @@ namespace PLATCV_tool
                         tmp = new byte[ch_off];
                         Array.Copy(data, table_data[i].t_name_off, tmp, 0, tmp.Length);
                         table_data[i].file_name = Encoding.ASCII.GetString(tmp);
+                        if (!table_data[i].file_name.Contains(slash.ToString())) table_data[i].file_name = table_data[i].file_name.Replace('/', slash);
 
                         //If file is video (mp4 file) don't decrypt it!
                         bool decrypt = table_data[i].file_name.Contains(".mp4") || table_data[i].file_name.Contains(".MP4");
 
                         if (GetDirName(table_data[i].file_name) != null
-                        && !Directory.Exists(OutputFolder + "/" + GetDirName(table_data[i].file_name))) Directory.CreateDirectory(OutputFolder + "/" + GetDirName(table_data[i].file_name));
+                        && !Directory.Exists(string.Format(OutputFolder + "{0}" + GetDirName(table_data[i].file_name), slash))) Directory.CreateDirectory(string.Format(OutputFolder + "{0}" + GetDirName(table_data[i].file_name), slash));
 
-                        if (File.Exists(OutputFolder + "/" + table_data[i].file_name)) File.Delete(OutputFolder + "/" + table_data[i].file_name);
+                        if (File.Exists(string.Format(OutputFolder + "{0}" + table_data[i].file_name, slash))) File.Delete(string.Format(OutputFolder + "{0}" + table_data[i].file_name, slash));
 
                         br.BaseStream.Seek(table_data[i].f_offset, SeekOrigin.Begin);
                         tmp = br.ReadBytes(table_data[i].f_size);
@@ -276,7 +277,7 @@ namespace PLATCV_tool
 
                         Crypt((uint)table_data[i].f_offset, ref tmp, table_data[i].f_size);
 
-                        FileStream new_fs = new FileStream(OutputFolder + "/" + table_data[i].file_name, FileMode.CreateNew);
+                        FileStream new_fs = new FileStream(string.Format(OutputFolder + "{0}" + table_data[i].file_name, slash), FileMode.CreateNew);
                         new_fs.Write(tmp, 0, tmp.Length);
                         new_fs.Close();
 
@@ -318,10 +319,10 @@ namespace PLATCV_tool
                     size = 0xffff;
                     offset = 0;
                     byte[] tmp;
-                    int t_offset; //Смещение к таблице
-                    int t_size; //Размер таблицы
-                    int f_count = -1; //Количество файлов
-                    int a_size = -1; //Размер архива
+                    int t_offset; //Offset to table
+                    int t_size; //Table size
+                    int f_count = -1; //Count of files
+                    int a_size = -1; //Archive's size
 
                     br.BaseStream.Seek(0, SeekOrigin.Begin);
                     data = br.ReadBytes(size);
